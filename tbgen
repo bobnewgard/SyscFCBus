@@ -1,0 +1,121 @@
+#!/bin/bash
+#
+# Copyright 2013 Robert Newgard
+#
+# This file is part of SyscFCBus.
+#
+# SyscFCBus is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SyscFCBus is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SyscFCBus.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#%# Replicate tb_0/test_0
+#
+#
+PROG=${0##*/}
+PCNT=$#
+OPER=$1
+FCNT=${TBGEN_FRAME_COUNT:-5}
+#
+function usage ()
+{
+    echo   "usage:"
+    echo   "  $PROG gen|del"
+    echo
+    echo   "      gen    generate test benches"
+    echo   "      del    delete generated test benches"
+    echo
+    echo   "setting TBGEN_FRAME_COUNT changes the number of"
+    echo   "packets tested.  Minimum is 0, maximum is 1500,"
+    echo   "default is 5"
+
+    exit 1
+}
+#
+function check_parm ()
+{
+    if [ "$PCNT" != 1 ] ; then
+        echo "$PROG [ERR] wrong number of parameters"
+        usage
+    fi
+    #
+    if [ "$OPER" != "gen" -a "$OPER" != "del" ] ; then
+        echo "$PROG [ERR] unsupported parameter ($OPER)"
+        usage
+    fi
+}
+#
+function check_env ()
+{
+    if ((FCNT < 0 || FCNT > 1500)) ; then
+        echo "$PROG [ERR] Frame count ($FCNT) out of range"
+        usage
+    fi
+}
+#
+function delete ()
+{
+    echo "deleting" tb_{1,2,3,4,5,6} tb_0/test_{1,2,3}
+    rm -rf tb_{1,2,3,4,5,6}
+    rm -rf tb_0/test_{1,2,3}
+}
+#
+function create ()
+{
+    for tb in {0,1,2,3,4,5,6} ; do
+        for tst in {0,1,2,3} ; do
+            if [ "${tb}${tst}" = "00" ] ; then
+                continue
+            fi
+            #
+            tdir=tb_${tb}/test_${tst}
+            echo "create $tdir"
+            mkdir -p $tdir
+            #
+            echo "constexpr unsigned test_req_dly   = ${tst};"                > $tdir/cfg_test.h
+            echo "constexpr unsigned test_frm_cnt   = ${FCNT};"               >> $tdir/cfg_test.h
+            echo "constexpr char     test_frm_nam[] = \"test_${tb}_${tst}\";" >> $tdir/cfg_test.h
+            #
+            (cd $tdir ; ln -s ../../tb_0/test_0/Makefile)
+            (cd $tdir ; ln -s ../../tb_0/test_0/pydrv_server.py)
+            (cd $tdir ; ln -s ../../tb_0/test_0/sc_main.cxx)
+            (cd $tdir ; ln -s ../../tb_0/test_0/test.cxx)
+            (cd $tdir ; ln -s ../../tb_0/test_0/test.h)
+        done
+        #
+        if [ "${tb}" = "0" ] ; then
+            continue
+        fi
+        #
+        echo "constexpr unsigned be = ${tb};" > tb_${tb}/cfg_be.h
+        #
+        (cd tb_${tb} ; ln -s ../tb_0/Makefile)
+        (cd tb_${tb} ; ln -s ../tb_0/tb.cxx)
+        (cd tb_${tb} ; ln -s ../tb_0/tb.h)
+        (cd tb_${tb} ; ln -s ../tb_0/tb_fsm.xref)
+    done
+}
+#
+function dispatch ()
+{
+    if [ "$OPER" = "del" ] ; then
+        delete
+    fi
+    #
+    if [ "$OPER" = "gen" ] ; then
+        create
+    fi
+}
+#
+check_parm
+check_env
+dispatch

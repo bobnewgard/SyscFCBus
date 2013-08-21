@@ -1,0 +1,91 @@
+#!/bin/bash
+#
+# Copyright 2013 Robert Newgard
+#
+# This file is part of SyscFCBus.
+#
+# SyscFCBus is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SyscFCBus is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SyscFCBus.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#%# Run replicated tests
+#
+#
+PROG=${0##*/}
+PCNT=$#
+TBN=$1
+TST=$(($2))
+OPER=$3
+FCNT=1
+#
+function usage ()
+{
+    echo   "usage:"
+    echo   "  $PROG tb test sim|wav|cln"
+    echo
+    echo   "      tb     test bench number [0-6]"
+    echo   "      test   test number [0-3]"
+    echo   "      sim    op: make sim for test"
+    echo   "      wav    op: make wav for test"
+    echo   "      cln    op: make clean for test"
+
+    exit 1
+}
+#
+function check_parm ()
+{
+    if [ "$PCNT" != 3 ] ; then
+        echo "[ERR]: wrong number of parameters"
+        usage
+    fi
+    #
+    if ((TBN < 0 || TBN > 6)) ; then
+        echo "[ERR]: tb out of range"
+        usage
+    fi
+    #
+    if ((TST < 0 || TST > 6)) ; then
+        echo "[ERR]: test out of range"
+        usage
+    fi
+    #
+    if [ "$OPER" != "sim" -a "$OPER" != "wav" -a "$OPER" != "cln" ] ; then
+        echo "[ERR]: unsupported op"
+        usage
+    fi
+}
+#
+function dispatch ()
+{
+    if [ "$OPER" = "sim" ] ; then
+        (set -xe ; cd tb_${TBN} ; make tb0-lib) && 
+        (set -xe ; cd tb_${TBN}/test_${TST} ; make test00-lib) && 
+        (set -xe ; cd tb_${TBN}/test_${TST} ; make exe00) && 
+        (set -xe ; cd tb_${TBN}/test_${TST} ; make exe00-run)
+        exit $?
+    fi
+    #
+    if [ "$OPER" = "wav" ] ; then
+        (set -xe ; cd tb_${TBN}/test_${TST} ; gtkwave test.vcd &> /dev/null &)
+        exit $?
+    fi
+    #
+    if [ "$OPER" = "cln" ] ; then
+        (set -xe ; cd tb_${TBN} ; make clean) &&
+        (set -xe ; cd tb_${TBN}/test_${TST} ; make clean)
+        exit $?
+    fi
+}
+#
+check_parm
+dispatch

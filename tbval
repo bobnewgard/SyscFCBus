@@ -1,0 +1,63 @@
+#!/bin/bash
+#
+# Copyright 2013 Robert Newgard
+#
+# This file is part of SyscFCBus.
+#
+# SyscFCBus is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# SyscFCBus is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with SyscFCBus.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+#%# Run all replicated tests
+#
+PROG=${0##*/}
+COLS=$(tput cols)
+#
+function message ()
+{
+    MSG="$1"
+    STR="\x2d- $MSG "
+    IDX=$(echo "$STR" | wc -m)
+    #
+    printf "$STR" > /dev/stderr
+    #
+    while  ((IDX < COLS)) ; do
+        printf "-" > /dev/stderr
+        IDX=$(($IDX + 1))
+    done
+    #
+    echo > /dev/stderr
+}
+#
+message "$PROG [INF] begin"
+#
+res=0
+#
+for tb in {0,1,2,3,4,5,6} ; do
+    for tst in {0,1,2,3} ; do
+        tdir=tb_${tb}/test_${tst}
+        #
+        message "$PROG [INF] $tdir begin"
+        #
+        ./tbrun $tb $tst sim
+        res=$?
+        #
+        if [ "$res" != "0" ] ; then
+            message "$PROG [ERR] $tdir failed"
+        else
+            message "$PROG [INF] $tdir OK"
+        fi
+    done
+done
+#
+message "$PROG [INF] OK"
