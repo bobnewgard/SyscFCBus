@@ -65,7 +65,7 @@ define dox
         rm -f Readme.md
         echo "\\mainpage %SyscFCBus Project" >> Readme.md
         cat README.md >> Readme.md
-        doxygen doxygen.conf
+        doxygen dox.conf
 endef
 
 help       : $(HELP)   ; $(root-help-core)
